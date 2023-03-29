@@ -26,7 +26,7 @@ class Torrent {
   dynamic get info => _info;
 
   /// If this model was parsed from file system, record the file path
-  String filePath;
+  String? filePath;
 
   final dynamic _info;
 
@@ -36,19 +36,19 @@ class Torrent {
   Set<Uri> get announces => _announces;
 
   /// creation date
-  DateTime creationDate;
+  DateTime? creationDate;
 
   /// free-form textual comments of the author
-  String comment;
+  String? comment;
 
   /// name and version of the program used to create the torrent file
-  String createdBy;
+  String? createdBy;
 
   /// the string encoding format used to generate the pieces part of the info dictionary in the torrent file metafile
-  String encoding;
+  String? encoding;
 
   /// Total file bytes size;
-  int length;
+  int? length;
 
   /// Torrent model name.
   final String name;
@@ -62,15 +62,15 @@ class Torrent {
   /// The files list
   List<TorrentFile> get files => _files;
 
-  final String infoHash;
+  final String? infoHash;
 
-  Uint8List infoHashBuffer;
+  Uint8List? infoHashBuffer;
 
-  int pieceLength;
+  int? pieceLength;
 
-  int lastPriceLength;
+  int? lastPriceLength;
 
-  bool private;
+  bool? private;
 
   /// DHT nodes
   List<Uri> nodes = [];
@@ -140,7 +140,7 @@ class Torrent {
   /// If param [force] is true, the exist .torrent file will be re-write with
   /// the new content
   Future<File> saveAs(String path, [bool force = false]) async {
-    if (path == null) throw Exception('File path is Null');
+    //if (path == null) throw Exception('File path is Null');
     var file = File(path);
     var exsits = await file.exists();
     if (exsits) {
@@ -154,12 +154,12 @@ class Torrent {
 
   /// Save current model to the current file
   Future<File> save() {
-    return saveAs(filePath, true);
+    return saveAs(filePath!, true);
   }
 }
 
 /// IO操作太耗时间，用隔离来做
-Future<T> _compution<T>(Function mainMethod, dynamic data) {
+Future<T> _compution<T>(void Function(Map<String, dynamic>) mainMethod, dynamic data) {
   var complete = Completer<T>();
   var port = ReceivePort();
   var errorPort = ReceivePort();
@@ -239,7 +239,7 @@ void _checkFile(Map torrent) {
 }
 
 /// Parse file bytes content ,return torrent file model
-Torrent parseTorrentFileContent(Uint8List fileBytes) {
+Torrent? parseTorrentFileContent(Uint8List fileBytes) {
   var torrent = bencoding.decode(fileBytes);
   if (torrent == null) return null;
   // check the file is correct
@@ -248,9 +248,9 @@ Torrent parseTorrentFileContent(Uint8List fileBytes) {
   var torrentName =
       _decodeString((torrent['info']['name.utf-8'] ?? torrent['info']['name']));
 
-  var sha1Info = sha1.convert(bencoding.encode(torrent['info']));
+  var sha1Info = sha1.convert(bencoding.encode(torrent['info']) as List<int>);
   var torrentModel = Torrent(
-      torrent['info'], torrentName, sha1Info.toString(), sha1Info.bytes);
+      torrent['info'], torrentName, sha1Info.toString(), sha1Info.bytes as Uint8List?);
 
   if (torrent['encoding'] != null) {
     torrentModel.encoding = _decodeString(torrent['encoding']);
@@ -281,7 +281,7 @@ Torrent parseTorrentFileContent(Uint8List fileBytes) {
           urls.forEach((url) {
             try {
               var aurl = Uri.parse(_decodeString(url));
-              if (aurl != null) torrentModel.addAnnounce(aurl);
+              torrentModel.addAnnounce(aurl);
             } catch (e) {
               //
             }
@@ -289,7 +289,7 @@ Torrent parseTorrentFileContent(Uint8List fileBytes) {
         } else {
           try {
             var aurl = Uri.parse(_decodeString(urls));
-            if (aurl != null) torrentModel.addAnnounce(aurl);
+            torrentModel.addAnnounce(aurl);
           } catch (e) {
             //
           }
@@ -300,7 +300,7 @@ Torrent parseTorrentFileContent(Uint8List fileBytes) {
   if (torrent['announce'] != null) {
     try {
       var aurl = Uri.parse(_decodeString(torrent['announce']));
-      if (aurl != null) torrentModel.addAnnounce(aurl);
+      torrentModel.addAnnounce(aurl);
     } catch (e) {
       //
     }
@@ -312,7 +312,7 @@ Torrent parseTorrentFileContent(Uint8List fileBytes) {
     urlList.forEach((url) {
       try {
         var aurl = Uri.parse(_decodeString(url));
-        if (aurl != null) torrentModel.addURL(aurl);
+        torrentModel.addURL(aurl);
       } catch (e) {
         //
       }
@@ -329,12 +329,12 @@ Torrent parseTorrentFileContent(Uint8List fileBytes) {
       ..addAll(filePath);
     var parts = pars.map((e) {
       if (e is List) {
-        return _decodeString(e);
+        return _decodeString(e as Uint8List);
       }
       if (e is String) return e;
     }).toList();
     var p = parts.fold<String>('',
-        (previousValue, element) => previousValue + PATH_SEPRATOR + element);
+        (previousValue, element) => previousValue + PATH_SEPRATOR + element!);
     p = p.substring(2);
     tempfiles.add({
       'path': p,
@@ -342,7 +342,7 @@ Torrent parseTorrentFileContent(Uint8List fileBytes) {
       'length': file['length'],
       'offset': files.sublist(0, i).fold(0, _sumLength)
     });
-    torrentModel.addFile(TorrentFile(parts[parts.length - 1], p, file['length'],
+    torrentModel.addFile(TorrentFile(parts[parts.length - 1]!, p, file['length'],
         files.sublist(0, i).fold(0, _sumLength)));
   }
   torrentModel.length = files.fold(0, _sumLength);
@@ -351,7 +351,7 @@ Torrent parseTorrentFileContent(Uint8List fileBytes) {
   torrentModel.pieceLength = torrent['info']['piece length'];
   torrentModel.lastPriceLength =
       (lastTorrentFile.offset + lastTorrentFile.length) %
-          torrentModel.pieceLength;
+          torrentModel.pieceLength!;
   if (torrentModel.lastPriceLength == 0) {
     torrentModel.lastPriceLength = torrentModel.pieceLength;
   }
@@ -373,10 +373,10 @@ Torrent parseTorrentFileContent(Uint8List fileBytes) {
 }
 
 /// 用torrent模型生成map，然后encode出byte buffer
-Uint8List _torrentModel2Bytebuffer(Torrent torrentModel) {
+Uint8List? _torrentModel2Bytebuffer(Torrent torrentModel) {
   var torrent = {'info': torrentModel.info};
   var announce = torrentModel.announces;
-  if (announce != null && announce.isNotEmpty) {
+  if (announce.isNotEmpty) {
     if (announce.length == 1) {
       torrent['announce'] =
           utf8.encode(torrentModel.announces.elementAt(0).toString());
@@ -388,19 +388,20 @@ Uint8List _torrentModel2Bytebuffer(Torrent torrentModel) {
     }
   }
 
-  if (torrentModel.urlList != null && torrentModel.urlList.isNotEmpty) {
+  if (torrentModel.urlList.isNotEmpty) {
     torrent['url-list'] = [];
     torrentModel.urlList.forEach((url) {
       torrent['url-list'].add(url.toString());
     });
   }
   if (torrentModel.private != null) {
-    torrent['private'] = torrentModel.private ? 1 : 0;
+    torrent['private'] = torrentModel.private == null ? 0 : (torrentModel.private! ? 1 : 0);
   }
 
-  if (torrentModel.creationDate != null) {
+  final creationDate = torrentModel.creationDate;
+  if (creationDate != null) {
     torrent['creation date'] =
-        torrentModel.creationDate.millisecondsSinceEpoch ~/ 1000;
+        creationDate.millisecondsSinceEpoch ~/ 1000;
   }
 
   if (torrentModel.creationDate != null) {
