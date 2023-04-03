@@ -8,8 +8,9 @@ import 'package:bencode_dart/bencode_dart.dart' as bencoding;
 import 'package:crypto/crypto.dart';
 
 import 'torrent_file.dart';
+import 'package:path/path.dart' as pathPkg;
 
-const PATH_SEPRATOR = '\\\\';
+//const PATH_SEPRATOR = '\\\\';
 
 ///
 /// Torrent File Structure Model.
@@ -327,15 +328,18 @@ Torrent? parseTorrentFileContent(Uint8List fileBytes) {
     var pars = []
       ..add(torrentModel.name)
       ..addAll(filePath);
-    var parts = pars.map((e) {
+    List parts = pars.map((e) {
       if (e is List) {
         return _decodeString(e as Uint8List);
       }
       if (e is String) return e;
     }).toList();
+    var p = pathPkg.joinAll(parts.where((element) => element is String).map((e)=> e as String));
+    /*
     var p = parts.fold<String>('',
         (previousValue, element) => previousValue + PATH_SEPRATOR + element!);
     p = p.substring(2);
+     */
     tempfiles.add({
       'path': p,
       'name': parts[parts.length - 1],
