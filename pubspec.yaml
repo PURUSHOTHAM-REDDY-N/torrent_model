@@ -11,7 +11,9 @@ environment:
 dependencies:
  crypto: ^3.0.2
  bencode_dart:
-  path: ../bencode_dart
+   git:
+      url: https://github.com/PURUSHOTHAM-REDDY-N/bencode_dart.git
+      ref: master 
  path: ^1.8.3
 
 dev_dependencies:
